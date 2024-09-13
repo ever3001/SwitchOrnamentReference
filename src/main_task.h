@@ -7,6 +7,7 @@
 #include "event.h"
 #include "logger.h"
 #include "task.h"
+#include <vector>
 
 class MainTask : public Task<MainTask>, public ace_button::IEventHandler {
     friend class Task<MainTask>; // Allow base Task to invoke protected run()
