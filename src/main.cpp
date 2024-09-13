@@ -7,7 +7,7 @@ MainTask main_task = MainTask(0);
 DisplayTask display_task = DisplayTask(main_task, 1);
 
 void setup() {
-  Serial.begin(921600);
+  Serial.begin(115200);
 
   main_task.begin();
   display_task.begin();

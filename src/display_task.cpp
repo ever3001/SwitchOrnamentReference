@@ -12,10 +12,8 @@
 
 using namespace json11;
 
-#define PIN_LCD_BACKLIGHT 27
-
-#define PIN_SD_DAT1 4
-#define PIN_SD_DAT2 12
+#define PIN_SD_DAT1 2
+#define PIN_SD_DAT2 3
 
 DisplayTask::DisplayTask(MainTask& main_task, const uint8_t task_core) : Task{"Display", 8192, 1, task_core}, Logger(), main_task_(main_task) {
     log_queue_ = xQueueCreate(10, sizeof(std::string *));
@@ -113,7 +111,7 @@ bool DisplayTask::updateFromFS(fs::FS &fs) {
       bool update_successful = false;
       if (updateSize > 0) {
           Serial.println("Try to start update");
-          digitalWrite(PIN_LCD_BACKLIGHT, HIGH);
+          digitalWrite(TFT_BL, HIGH);
           tft_.fillScreen(TFT_BLACK);
           tft_.drawString("Starting update...", 0, 0);
           delay(1000);
@@ -137,7 +135,7 @@ bool DisplayTask::updateFromFS(fs::FS &fs) {
 }
 
 void DisplayTask::run() {
-    pinMode(PIN_LCD_BACKLIGHT, OUTPUT);
+    pinMode(TFT_BL, OUTPUT);
     pinMode(PIN_SD_DAT1, INPUT_PULLUP);
     pinMode(PIN_SD_DAT2, INPUT_PULLUP);
 
@@ -150,7 +148,7 @@ void DisplayTask::run() {
 
     bool isblinked = false;
     while(! SD_MMC.begin("/sdcard", false) ) {
-        digitalWrite(PIN_LCD_BACKLIGHT, HIGH);
+        digitalWrite(TFT_BL, HIGH);
         log_n("SD Card mount failed!");
         isblinked = !isblinked;
         if( isblinked ) {
@@ -215,12 +213,12 @@ void DisplayTask::run() {
     if (GifPlayer::start("/gifs/boot.gif")) {
         GifPlayer::play_frame(nullptr);
         delay(50);
-        digitalWrite(PIN_LCD_BACKLIGHT, HIGH);
+        digitalWrite(TFT_BL, HIGH);
         delay(200);
         while (GifPlayer::play_frame(nullptr)) {
             yield();
         }
-        digitalWrite(PIN_LCD_BACKLIGHT, LOW);
+        digitalWrite(TFT_BL, LOW);
         delay(500);
         GifPlayer::stop();
     }
@@ -295,7 +293,7 @@ void DisplayTask::run() {
                 last_frame = millis();
                 GifPlayer::play_frame(&frame_delay);
                 delay(50);
-                digitalWrite(PIN_LCD_BACKLIGHT, HIGH);
+                digitalWrite(TFT_BL, HIGH);
                 state = State::PLAY_GIF;
                 break;
             case State::PLAY_GIF: {
