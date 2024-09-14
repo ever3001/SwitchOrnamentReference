@@ -13,7 +13,7 @@
 #define MDNS_NAME "switchOrnament"
 #define OTA_PASSWORD "hunter2"
 
-#define PIN_LEFT_BUTTON 21
+#define PIN_LEFT_BUTTON 43
 #define PIN_RIGHT_BUTTON 16
 
 using namespace ace_button;

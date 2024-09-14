@@ -1,7 +1,7 @@
 #include "gif_player.h"
 
 #include <AnimatedGIF.h>
-#include <SD_MMC.h>
+#include <SD.h>
 #include <TFT_eSPI.h>
 
 AnimatedGIF GifPlayer::gif;
@@ -22,8 +22,8 @@ int GifPlayer::max_line = -1;
 
 void * GifPlayer::GIFOpenFile(const char *fname, int32_t *pSize)
 {
-  //log_d("GIFOpenFile( %s )\n", fname );
-  FSGifFile = SD_MMC.open(fname);
+  log_d("GIFOpenFile( %s )\n", fname );
+  FSGifFile = SD.open(fname);
   if (FSGifFile) {
     *pSize = FSGifFile.size();
     return (void *)&FSGifFile;

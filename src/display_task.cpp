@@ -1,7 +1,7 @@
 #include "display_task.h"
 
 #include <AceButton.h>
-#include <SD_MMC.h>
+#include <SD.h>
 #include <TFT_eSPI.h>
 #include <Update.h>
 #include <WiFi.h>
@@ -12,8 +12,12 @@
 
 using namespace json11;
 
-#define PIN_SD_DAT1 2
-#define PIN_SD_DAT2 3
+#define SD_CS 21  // Adjust this pin number as needed for your SD card module
+
+int sck = 1;
+int miso = 2;
+int mosi = 3;
+int cs = 21;
 
 DisplayTask::DisplayTask(MainTask& main_task, const uint8_t task_core) : Task{"Display", 8192, 1, task_core}, Logger(), main_task_(main_task) {
     log_queue_ = xQueueCreate(10, sizeof(std::string *));
@@ -25,7 +29,7 @@ DisplayTask::DisplayTask(MainTask& main_task, const uint8_t task_core) : Task{"D
 
 int DisplayTask::enumerateGifs(const char* basePath, std::vector<std::string>& out_files) {
     int amount = 0;
-    File GifRootFolder = SD_MMC.open(basePath);
+    File GifRootFolder = SD.open(basePath);
     if(!GifRootFolder){
         log_n("Failed to open directory");
         return 0;
@@ -135,11 +139,13 @@ bool DisplayTask::updateFromFS(fs::FS &fs) {
 }
 
 void DisplayTask::run() {
+    
     pinMode(TFT_BL, OUTPUT);
-    pinMode(PIN_SD_DAT1, INPUT_PULLUP);
-    pinMode(PIN_SD_DAT2, INPUT_PULLUP);
+    pinMode(SD_CS, OUTPUT);
+    digitalWrite(SD_CS, HIGH);
 
     tft_.begin();
+
 #ifdef USE_DMA
     tft_.initDMA();
 #endif
@@ -147,7 +153,8 @@ void DisplayTask::run() {
     tft_.fillScreen(TFT_BLACK);
 
     bool isblinked = false;
-    while(! SD_MMC.begin("/sdcard", false) ) {
+    SPI.begin(sck, miso, mosi, cs);
+    while(!SD.begin(cs)) {
         digitalWrite(TFT_BL, HIGH);
         log_n("SD Card mount failed!");
         isblinked = !isblinked;
@@ -164,7 +171,7 @@ void DisplayTask::run() {
 
     log_n("SD Card mounted!");
 
-    if (updateFromFS(SD_MMC)) {
+    if (updateFromFS(SD)) {
         ESP.restart();
     }
 
@@ -175,7 +182,7 @@ void DisplayTask::run() {
     main_task_.setLogger(this);
 
     // Load config from SD card
-    File configFile = SD_MMC.open("/config.json");
+    File configFile = SD.open("/config.json");
     if (configFile) {
         if(configFile.isDirectory()){
             log("Error, config.json is not a file");

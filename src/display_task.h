@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include <SD_MMC.h>
+#include <SD.h>
 #include <TFT_eSPI.h>
 
 #include "logger.h"

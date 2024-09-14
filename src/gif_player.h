@@ -2,7 +2,7 @@
 
 #include <AnimatedGIF.h>
 #include <Arduino.h>
-#include <SD_MMC.h>
+#include <SD.h>
 #include <TFT_eSPI.h>
 
 #define DISPLAY_WIDTH 240
