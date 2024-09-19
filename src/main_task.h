@@ -5,7 +5,6 @@
 #include <AceButton.h>
 
 #include "event.h"
-#include "logger.h"
 #include "task.h"
 #include <vector>
 
@@ -18,7 +17,6 @@ class MainTask : public Task<MainTask>, public ace_button::IEventHandler {
 
         void setConfig(const char* wifi_ssid, const char* wifi_password, const char* timezone);
         bool getLocalTime(tm* t);
-        void setLogger(Logger* logger);
         void setOtaEnabled(bool enabled);
         void registerEventQueue(QueueHandle_t queue);
 
@@ -29,9 +27,6 @@ class MainTask : public Task<MainTask>, public ace_button::IEventHandler {
 
     private:
 
-        void log(const char* message);
-        void log(String message);
-
         void publishEvent(Event event);
         
         SemaphoreHandle_t semaphore_;
@@ -41,8 +36,6 @@ class MainTask : public Task<MainTask>, public ace_button::IEventHandler {
         String timezone_;
 
         bool ntp_synced_ = false;
-
-        Logger* logger_ = nullptr;
 
         std::vector<QueueHandle_t> event_queues_;
 };

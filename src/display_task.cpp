@@ -19,7 +19,7 @@ int miso = 2;
 int mosi = 3;
 int cs = 21;
 
-DisplayTask::DisplayTask(MainTask& main_task, const uint8_t task_core) : Task{"Display", 8192, 1, task_core}, Logger(), main_task_(main_task) {
+DisplayTask::DisplayTask(MainTask& main_task, const uint8_t task_core) : Task{"Display", 8192, 1, task_core}, main_task_(main_task) {
     log_queue_ = xQueueCreate(10, sizeof(std::string *));
     assert(log_queue_ != NULL);
 
@@ -61,28 +61,28 @@ bool DisplayTask::performUpdate(Stream &updateSource, size_t updateSize) {
    if (Update.begin(updateSize)) {      
       size_t written = Update.writeStream(updateSource);
       if (written == updateSize) {
-         Serial.println("Written : " + String(written) + " successfully");
+         ESP_LOGI("MAIN_TASK", "Written : %d successfully", written);
       }
       else {
-         Serial.println("Written only : " + String(written) + "/" + String(updateSize) + ". Retry?");
+         ESP_LOGI("MAIN_TASK", "Written only : %d/%d. Retry?", written, updateSize);
       }
       if (Update.end()) {
-         Serial.println("OTA done!");
+         ESP_LOGI("MAIN_TASK", "OTA done!");
          if (Update.isFinished()) {
-            Serial.println("Update successfully completed. Rebooting.");
+            ESP_LOGI("MAIN_TASK", "Update Success. Rebooting...");
             tft_.fillScreen(TFT_BLACK);
             tft_.drawString("Update successful!", 0, 0);
             return true;
          }
          else {
-            Serial.println("Update not finished? Something went wrong!");
+            ESP_LOGE("MAIN_TASK", "Update not finished? Something went wrong!");
             tft_.fillScreen(TFT_BLACK);
             tft_.drawString("Update error: unknown", 0, 0);
          }
       }
       else {
         uint8_t error = Update.getError();
-         Serial.println("Error Occurred. Error #: " + String(error));
+        ESP_LOGE("MAIN_TASK", "Error Occurred. Error #: %d", error);
         tft_.fillScreen(TFT_BLACK);
         tft_.drawString("Update error: " + String(error), 0, 0);
       }
@@ -90,7 +90,7 @@ bool DisplayTask::performUpdate(Stream &updateSource, size_t updateSize) {
    }
    else
    {
-      Serial.println("Not enough space to begin OTA");
+        ESP_LOGE("MAIN_TASK", "Not enough space to begin OTA");
         tft_.fillScreen(TFT_BLACK);
         tft_.drawString("Not enough space", 0, 0);
    }
@@ -105,16 +105,16 @@ bool DisplayTask::updateFromFS(fs::FS &fs) {
    File updateBin = fs.open("/firmware.bin");
    if (updateBin) {
       if(updateBin.isDirectory()){
-         Serial.println("Error, firmware.bin is not a file");
-         updateBin.close();
-         return false;
+        ESP_LOGE("MAIN_TASK", "Error, firmware.bin is not a file");
+        updateBin.close();
+        return false;
       }
 
       size_t updateSize = updateBin.size();
 
       bool update_successful = false;
       if (updateSize > 0) {
-          Serial.println("Try to start update");
+          ESP_LOGI("MAIN_TASK", "Try to start update");
           digitalWrite(TFT_BL, HIGH);
           tft_.fillScreen(TFT_BLACK);
           tft_.drawString("Starting update...", 0, 0);
@@ -122,7 +122,7 @@ bool DisplayTask::updateFromFS(fs::FS &fs) {
          update_successful = performUpdate(updateBin, updateSize);
       }
       else {
-         Serial.println("Error, file is empty");
+         ESP_LOGE("MAIN_TASK", "Error, file is empty");
       }
 
       updateBin.close();
@@ -133,7 +133,7 @@ bool DisplayTask::updateFromFS(fs::FS &fs) {
       return update_successful;
    }
    else {
-      Serial.println("No firmware.bin at sd root");
+      ESP_LOGE("MAIN_TASK", "No firmware.bin at sd root");
       return false;
    }
 }
@@ -179,13 +179,11 @@ void DisplayTask::run() {
     // CHANGES ABOVE THIS LINE MAY BREAK FIRMWARE UPDATES!!!
     // #####################################################
 
-    main_task_.setLogger(this);
-
     // Load config from SD card
     File configFile = SD.open("/config.json");
     if (configFile) {
         if(configFile.isDirectory()){
-            log("Error, config.json is not a file");
+            ESP_LOGE("DISPLAY_TASK","config.json is not a file");
         } else {
             char data[512];
             size_t data_len = configFile.readBytes(data, sizeof(data) - 1);
@@ -197,19 +195,19 @@ void DisplayTask::run() {
                 show_log_ = json["show_log"].bool_value();
                 const char* ssid = json["ssid"].string_value().c_str();
                 const char* password = json["password"].string_value().c_str();
-                Serial.printf("Wifi info: %s %s\n", ssid, password);
+                ESP_LOGD("DISPLAY_TASK","Wifi info: %s %s\n", ssid, password);
 
                 const char* tz = json["timezone"].string_value().c_str();
-                Serial.printf("Timezone: %s\n", tz);
+                ESP_LOGD("DISPLAY_TASK","Timezone: %s\n", tz);
 
                 main_task_.setConfig(ssid, password, tz);
             } else {
-                log("Error parsing wifi credentials! " + String(err.c_str()));
+                ESP_LOGE("DISPLAY_TASK", "Error parsing wifi credentials! %s", err.c_str());
             }
         }
         configFile.close();
     } else {
-        log("Missing config file!");
+        ESP_LOGE("DISPLAY_TASK","Missing config file config.json");
     }
 
     // Delay to avoid brownout while wifi is starting
@@ -267,14 +265,14 @@ void DisplayTask::run() {
         handleLogRendering();
         switch (state) {
             case State::CHOOSE_GIF:
-                Serial.println("Choose gif");
+                ESP_LOGI("MAIN_TASK", "Choosing gif");
                 if (millis() - start_millis > minimum_loop_duration) {
                     // Only change the file if we've exceeded the minimum loop duration
                     if (isChristmas()) {
                         if (num_christmas_gifs > 0) {
                             current_file_name = christmas_gifs[current_file++ % num_christmas_gifs].c_str();
                             minimum_loop_duration = 30000;
-                            Serial.printf("Chose christmas gif: %s\n", current_file_name);
+                            ESP_LOGD("MAIN_TASK", "Chose christmas gif: %s\n", current_file_name);
                         } else {
                             continue;
                         }
@@ -287,7 +285,7 @@ void DisplayTask::run() {
                             current_file = next_file;
                             current_file_name = main_gifs[current_file].c_str();
                             minimum_loop_duration = 0;
-                            Serial.printf("Chose gif: %s\n", current_file_name);
+                            ESP_LOGD("MAIN_TASK", "Chose main gif: %s\n", current_file_name);
                         } else {
                             continue;
                         }
@@ -400,19 +398,4 @@ void DisplayTask::handleLogRendering() {
         GifPlayer::set_max_line(-1);
     }
     message_visible_ = show;
-}
-
-void DisplayTask::log(const char* msg) {
-    Serial.println(msg);
-    // Allocate a string for the duration it's in the queue; it is free'd by the queue consumer
-    std::string* msg_str = new std::string(msg);
-
-    // Put string in queue (or drop if full to avoid blocking)
-    if (xQueueSendToBack(log_queue_, &msg_str, 0) != pdTRUE) {
-        delete msg_str;
-    }
-}
-
-void DisplayTask::log(String msg) {
-    log(msg.c_str());
 }

@@ -50,25 +50,25 @@ void MainTask::run() {
                 type = "(filesystem)";
 
             // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-            log("Start OTA " + type);
+            ESP_LOGI("MAIN_TASK", "Start OTA %s", type.c_str());
         })
         .onEnd([this]() {
-            log("OTA End");
+            ESP_LOGI("MAIN_TASK", "OTA End");
         })
         .onProgress([this](unsigned int progress, unsigned int total) {
             static uint32_t last_progress;
             if (millis() - last_progress > 1000) {
-                log("OTA Progress: " + String((int)(progress * 100 / total)) + "%");
+                ESP_LOGI("MAIN_TASK", "OTA Progress: %d \%", (int)(progress * 100 / total));
                 last_progress = millis();
             }
         })
         .onError([this](ota_error_t error) {
-            log("Error[%u]: " + String(error));
-            if (error == OTA_AUTH_ERROR) log("Auth Failed");
-            else if (error == OTA_BEGIN_ERROR) log("Begin Failed");
-            else if (error == OTA_CONNECT_ERROR) log("Connect Failed");
-            else if (error == OTA_RECEIVE_ERROR) log("Receive Failed");
-            else if (error == OTA_END_ERROR) log("End Failed");
+            ESP_LOGE("MAIN_TASK","Error[%u]: ", error);
+            if (error == OTA_AUTH_ERROR) ESP_LOGE("MAIN_TASK","Auth Failed");
+            else if (error == OTA_BEGIN_ERROR) ESP_LOGE("MAIN_TASK","Begin Failed");
+            else if (error == OTA_CONNECT_ERROR) ESP_LOGE("MAIN_TASK","Connect Failed");
+            else if (error == OTA_RECEIVE_ERROR) ESP_LOGE("MAIN_TASK","Receive Failed");
+            else if (error == OTA_END_ERROR) ESP_LOGE("MAIN_TASK","End Failed");
         });
     ArduinoOTA.setHostname(MDNS_NAME);
     ArduinoOTA.setPassword(OTA_PASSWORD);
@@ -90,7 +90,7 @@ void MainTask::run() {
 
                 char buf[200];
                 snprintf(buf, sizeof(buf), "Connecting to %s...", wifi_ssid.c_str());
-                log(buf);
+                ESP_LOGI("MAIN_TASK", "%s", buf);
                 WiFi.begin(wifi_ssid.c_str(), wifi_password.c_str());
             }
         }
@@ -99,10 +99,10 @@ void MainTask::run() {
         if (new_status != wifi_status) {
             char buf[200];
             snprintf(buf, sizeof(buf), "Wifi status changed to %d\n", new_status);
-            log(buf);
+            ESP_LOGI("MAIN_TASK", "%s", buf);
             if (new_status == WL_CONNECTED) {
                 snprintf(buf, sizeof(buf), "IP: %s", WiFi.localIP().toString().c_str());
-                log(buf);
+                ESP_LOGI("MAIN_TASK", "%s", buf);
 
                 delay(100);
                 // Sync SNTP
@@ -135,8 +135,7 @@ void MainTask::run() {
             // We do this separately from above to avoid deadlock: log() requires semaphore_ and we're non-reentrant-locking
             char buf[200];
             strftime(buf, sizeof(buf), "Got time: %Y-%m-%d %H:%M:%S", localtime(&now));
-            Serial.printf("%s\n", buf);
-            log(buf);
+            ESP_LOGD("MAIN_TASK", "%s", buf);
         }
 
         ArduinoOTA.handle();
@@ -167,30 +166,12 @@ bool MainTask::getLocalTime(tm* t) {
     return true;
 }
 
-void MainTask::setLogger(Logger* logger) {
-    SemaphoreGuard lock(semaphore_);
-    logger_ = logger;
-}
-
 void MainTask::setOtaEnabled(bool enabled) {
     if (enabled) {
         ArduinoOTA.begin();
     } else {
         ArduinoOTA.end();
     }
-}
-
-void MainTask::log(const char* message) {
-    SemaphoreGuard lock(semaphore_);
-    if (logger_ != nullptr) {
-        logger_->log(message);
-    } else {
-        Serial.println(message);
-    }
-}
-
-void MainTask::log(String message) {
-    log(message.c_str());
 }
 
 void MainTask::registerEventQueue(QueueHandle_t queue) {

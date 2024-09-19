@@ -4,7 +4,6 @@
 #include <SD.h>
 #include <TFT_eSPI.h>
 
-#include "logger.h"
 #include "main_task.h"
 #include "task.h"
 
@@ -14,14 +13,12 @@ enum class State {
     SHOW_CREDITS,
 };
 
-class DisplayTask : public Task<DisplayTask>, public Logger {
+class DisplayTask : public Task<DisplayTask> {
     friend class Task<DisplayTask>; // Allow base Task to invoke protected run()
 
     public:
         DisplayTask(MainTask& main_task, const uint8_t task_core);
         virtual ~DisplayTask() {};
-
-        void log(const char* msg) override;
 
     protected:
         void run();
@@ -32,8 +29,6 @@ class DisplayTask : public Task<DisplayTask>, public Logger {
         int enumerateGifs( const char* basePath, std::vector<std::string>& out_files);
         bool isChristmas();
         void handleLogRendering();
-
-        void log(String msg);
 
         TFT_eSPI tft_ = TFT_eSPI();
         MainTask& main_task_;
