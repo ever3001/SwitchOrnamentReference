@@ -5,40 +5,39 @@
 #include <TFT_eSPI.h>
 
 AnimatedGIF GifPlayer::gif;
-TFT_eSPI* GifPlayer::tft;
+TFT_eSPI *GifPlayer::tft;
 
 File GifPlayer::FSGifFile; // temp gif file holder
 
 #ifdef USE_DMA
 uint16_t GifPlayer::usTemp[2][BUFFER_SIZE]; // Global to support DMA use
 #else
-uint16_t GifPlayer::usTemp[1][BUFFER_SIZE];    // Global to support DMA use
+uint16_t GifPlayer::usTemp[1][BUFFER_SIZE]; // Global to support DMA use
 #endif
 bool GifPlayer::dmaBuf;
 
 int GifPlayer::frame_delay;
 int GifPlayer::max_line = -1;
 
-
-void * GifPlayer::GIFOpenFile(const char *fname, int32_t *pSize)
+void *GifPlayer::GIFOpenFile(const char *fname, int32_t *pSize)
 {
-  log_d("GIFOpenFile( %s )\n", fname );
+  ESP_LOGD("GIF_PLAYER", "GIFOpenFile( %s )\n", fname);
   FSGifFile = SD.open(fname);
-  if (FSGifFile) {
+  if (FSGifFile)
+  {
     *pSize = FSGifFile.size();
+    ESP_LOGD("GIF_PLAYER", "GIFOpenFile( %s ) size %d\n", fname, *pSize);
     return (void *)&FSGifFile;
   }
   return NULL;
 }
 
-
 void GifPlayer::GIFCloseFile(void *pHandle)
 {
   File *f = static_cast<File *>(pHandle);
   if (f != NULL)
-     f->close();
+    f->close();
 }
-
 
 int32_t GifPlayer::GIFReadFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen)
 {
@@ -47,14 +46,13 @@ int32_t GifPlayer::GIFReadFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen)
   File *f = static_cast<File *>(pFile->fHandle);
   // Note: If you read a file all the way to the last byte, seek() stops working
   if ((pFile->iSize - pFile->iPos) < iLen)
-      iBytesRead = pFile->iSize - pFile->iPos - 1; // <-- ugly work-around
+    iBytesRead = pFile->iSize - pFile->iPos - 1; // <-- ugly work-around
   if (iBytesRead <= 0)
-      return 0;
+    return 0;
   iBytesRead = (int32_t)f->read(pBuf, iBytesRead);
   pFile->iPos = f->position();
   return iBytesRead;
 }
-
 
 int32_t GifPlayer::GIFSeekFile(GIFFILE *pFile, int32_t iPosition)
 {
@@ -63,15 +61,12 @@ int32_t GifPlayer::GIFSeekFile(GIFFILE *pFile, int32_t iPosition)
   f->seek(iPosition);
   pFile->iPos = (int32_t)f->position();
   i = micros() - i;
-  //log_d("Seek time = %d us\n", i);
+  ESP_LOGD("GIF_PLAYER", "Seek time = %d us\n", i);
   return pFile->iPos;
 }
 
-
-
-
 // From AnimatedGIF TFT_eSPI_memory example
-  
+
 // Draw a line of image directly on the LCD
 void GifPlayer::GIFDraw(GIFDRAW *pDraw)
 {
@@ -111,7 +106,7 @@ void GifPlayer::GIFDraw(GIFDRAW *pDraw)
     {
       c = ucTransparent - 1;
       d = &usTemp[0][0];
-      while (c != ucTransparent && s < pEnd && iCount < BUFFER_SIZE )
+      while (c != ucTransparent && s < pEnd && iCount < BUFFER_SIZE)
       {
         c = *s++;
         if (c == ucTransparent) // done, stop
@@ -151,9 +146,11 @@ void GifPlayer::GIFDraw(GIFDRAW *pDraw)
     // Unroll the first pass to boost DMA performance
     // Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
     if (iWidth <= BUFFER_SIZE)
-      for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+      for (iCount = 0; iCount < iWidth; iCount++)
+        usTemp[dmaBuf][iCount] = usPalette[*s++];
     else
-      for (iCount = 0; iCount < BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+      for (iCount = 0; iCount < BUFFER_SIZE; iCount++)
+        usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 #ifdef USE_DMA // 71.6 fps (ST7796 84.5 fps)
     tft->dmaWait();
@@ -171,9 +168,11 @@ void GifPlayer::GIFDraw(GIFDRAW *pDraw)
     {
       // Translate the 8-bit pixels through the RGB565 palette (already byte reversed)
       if (iWidth <= BUFFER_SIZE)
-        for (iCount = 0; iCount < iWidth; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+        for (iCount = 0; iCount < iWidth; iCount++)
+          usTemp[dmaBuf][iCount] = usPalette[*s++];
       else
-        for (iCount = 0; iCount < BUFFER_SIZE; iCount++) usTemp[dmaBuf][iCount] = usPalette[*s++];
+        for (iCount = 0; iCount < BUFFER_SIZE; iCount++)
+          usTemp[dmaBuf][iCount] = usPalette[*s++];
 
 #ifdef USE_DMA
       tft->dmaWait();
@@ -187,39 +186,41 @@ void GifPlayer::GIFDraw(GIFDRAW *pDraw)
   }
 } /* GIFDraw() */
 
+bool GifPlayer::start(const char *path)
+{
+  gif.begin(BIG_ENDIAN_PIXELS);
 
+  if (!gif.open(path, GIFOpenFile, GIFCloseFile, GIFReadFile, GIFSeekFile, GIFDraw))
+  {
+    ESP_LOGE("DISPLAY_TASK", "Could not open gif %s", path);
+    return false;
+  }
 
-
-bool GifPlayer::start(const char* path) {
-    gif.begin(BIG_ENDIAN_PIXELS);
-
-    if( ! gif.open( path, GIFOpenFile, GIFCloseFile, GIFReadFile, GIFSeekFile, GIFDraw ) ) {
-        log_n("Could not open gif %s", path );
-        return false;
-    }
-
-    tft->startWrite();
-    return true;
+  tft->startWrite();
+  return true;
 }
 
-bool GifPlayer::play_frame(int* frame_delay) {
-    bool sync = frame_delay == nullptr;
-    return gif.playFrame(sync, frame_delay) == 1;
-
+bool GifPlayer::play_frame(int *frame_delay)
+{
+  bool sync = frame_delay == nullptr;
+  return gif.playFrame(sync, frame_delay) == 1;
 }
 
-void GifPlayer::stop() {
-    gif.close();
-    tft->endWrite();
-    gif.reset();
+void GifPlayer::stop()
+{
+  gif.close();
+  tft->endWrite();
+  gif.reset();
 }
 
-void GifPlayer::begin(TFT_eSPI* tft) {
-    GifPlayer::tft = tft;
+void GifPlayer::begin(TFT_eSPI *tft)
+{
+  GifPlayer::tft = tft;
 
-    dmaBuf = 0;
+  dmaBuf = 0;
 }
 
-void GifPlayer::set_max_line(int l) {
-    max_line = l;
+void GifPlayer::set_max_line(int l)
+{
+  max_line = l;
 }

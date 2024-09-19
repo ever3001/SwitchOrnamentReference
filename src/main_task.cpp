@@ -18,18 +18,22 @@
 
 using namespace ace_button;
 
-MainTask::MainTask(const uint8_t task_core) : Task{"Main", 8192, 1, task_core}, semaphore_(xSemaphoreCreateMutex()) {
+MainTask::MainTask(const uint8_t task_core) : Task{"Main", 8192, 1, task_core}, semaphore_(xSemaphoreCreateMutex())
+{
     assert(semaphore_ != NULL);
     xSemaphoreGive(semaphore_);
 }
 
-MainTask::~MainTask() {
-    if (semaphore_ != NULL) {
+MainTask::~MainTask()
+{
+    if (semaphore_ != NULL)
+    {
         vSemaphoreDelete(semaphore_);
     }
 }
 
-void MainTask::run() {
+void MainTask::run()
+{
     WiFi.mode(WIFI_STA);
 
     AceButton left_button(PIN_LEFT_BUTTON, 1, BUTTON_ID_LEFT);
@@ -38,11 +42,12 @@ void MainTask::run() {
     pinMode(PIN_LEFT_BUTTON, INPUT_PULLUP);
     pinMode(PIN_RIGHT_BUTTON, INPUT_PULLUP);
 
-    ButtonConfig* config = ButtonConfig::getSystemButtonConfig();
+    ButtonConfig *config = ButtonConfig::getSystemButtonConfig();
     config->setIEventHandler(this);
-    
+
     ArduinoOTA
-        .onStart([this]() {
+        .onStart([this]()
+                 {
             String type;
             if (ArduinoOTA.getCommand() == U_FLASH)
                 type = "(flash)";
@@ -50,34 +55,35 @@ void MainTask::run() {
                 type = "(filesystem)";
 
             // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-            ESP_LOGI("MAIN_TASK", "Start OTA %s", type.c_str());
-        })
-        .onEnd([this]() {
-            ESP_LOGI("MAIN_TASK", "OTA End");
-        })
-        .onProgress([this](unsigned int progress, unsigned int total) {
+            ESP_LOGI("MAIN_TASK", "Start OTA %s", type.c_str()); })
+        .onEnd([this]()
+               { ESP_LOGI("MAIN_TASK", "OTA End"); })
+        .onProgress([this](unsigned int progress, unsigned int total)
+                    {
             static uint32_t last_progress;
             if (millis() - last_progress > 1000) {
                 ESP_LOGI("MAIN_TASK", "OTA Progress: %d \%", (int)(progress * 100 / total));
                 last_progress = millis();
-            }
-        })
-        .onError([this](ota_error_t error) {
+            } })
+        .onError([this](ota_error_t error)
+                 {
             ESP_LOGE("MAIN_TASK","Error[%u]: ", error);
             if (error == OTA_AUTH_ERROR) ESP_LOGE("MAIN_TASK","Auth Failed");
             else if (error == OTA_BEGIN_ERROR) ESP_LOGE("MAIN_TASK","Begin Failed");
             else if (error == OTA_CONNECT_ERROR) ESP_LOGE("MAIN_TASK","Connect Failed");
             else if (error == OTA_RECEIVE_ERROR) ESP_LOGE("MAIN_TASK","Receive Failed");
-            else if (error == OTA_END_ERROR) ESP_LOGE("MAIN_TASK","End Failed");
-        });
+            else if (error == OTA_END_ERROR) ESP_LOGE("MAIN_TASK","End Failed"); });
     ArduinoOTA.setHostname(MDNS_NAME);
     ArduinoOTA.setPassword(OTA_PASSWORD);
 
     wl_status_t wifi_status = WL_DISCONNECTED;
-    while (1) {
+    while (1)
+    {
         uint32_t notify_value = 0;
-        if (xTaskNotifyWait(0, ULONG_MAX, &notify_value, 0) == pdTRUE) {
-            if (notify_value && TASK_NOTIFY_SET_CONFIG) {
+        if (xTaskNotifyWait(0, ULONG_MAX, &notify_value, 0) == pdTRUE)
+        {
+            if (notify_value && TASK_NOTIFY_SET_CONFIG)
+            {
                 String wifi_ssid, wifi_password, timezone;
                 {
                     SemaphoreGuard lock(semaphore_);
@@ -96,15 +102,18 @@ void MainTask::run() {
         }
 
         wl_status_t new_status = WiFi.status();
-        if (new_status != wifi_status) {
+        if (new_status != wifi_status)
+        {
             char buf[200];
             snprintf(buf, sizeof(buf), "Wifi status changed to %d\n", new_status);
             ESP_LOGI("MAIN_TASK", "%s", buf);
-            if (new_status == WL_CONNECTED) {
+            if (new_status == WL_CONNECTED)
+            {
                 snprintf(buf, sizeof(buf), "IP: %s", WiFi.localIP().toString().c_str());
                 ESP_LOGI("MAIN_TASK", "%s", buf);
 
-                delay(100);
+                vTaskDelay(100 / portTICK_PERIOD_MS);
+
                 // Sync SNTP
                 sntp_setoperatingmode(SNTP_OPMODE_POLL);
 
@@ -116,22 +125,24 @@ void MainTask::run() {
             wifi_status = new_status;
         }
 
-
         time_t now = 0;
         bool ntp_just_synced = false;
         {
             SemaphoreGuard lock(semaphore_);
-            if (!ntp_synced_) {
+            if (!ntp_synced_)
+            {
                 // Check if NTP has synced yet
                 time(&now);
-                if (now > 1625099485) {
+                if (now > 1625099485)
+                {
                     ntp_just_synced = true;
                     ntp_synced_ = true;
                 }
             }
         }
 
-        if (ntp_just_synced) {
+        if (ntp_just_synced)
+        {
             // We do this separately from above to avoid deadlock: log() requires semaphore_ and we're non-reentrant-locking
             char buf[200];
             strftime(buf, sizeof(buf), "Got time: %Y-%m-%d %H:%M:%S", localtime(&now));
@@ -141,11 +152,12 @@ void MainTask::run() {
         ArduinoOTA.handle();
         left_button.check();
         right_button.check();
-        delay(1);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 }
 
-void MainTask::setConfig(const char* wifi_ssid, const char* wifi_password, const char* timezone) {
+void MainTask::setConfig(const char *wifi_ssid, const char *wifi_password, const char *timezone)
+{
     {
         SemaphoreGuard lock(semaphore_);
         wifi_ssid_ = String(wifi_ssid);
@@ -155,9 +167,11 @@ void MainTask::setConfig(const char* wifi_ssid, const char* wifi_password, const
     xTaskNotify(getHandle(), TASK_NOTIFY_SET_CONFIG, eSetBits);
 }
 
-bool MainTask::getLocalTime(tm* t) {
+bool MainTask::getLocalTime(tm *t)
+{
     SemaphoreGuard lock(semaphore_);
-    if (!ntp_synced_) {
+    if (!ntp_synced_)
+    {
         return false;
     }
     time_t now = 0;
@@ -166,27 +180,35 @@ bool MainTask::getLocalTime(tm* t) {
     return true;
 }
 
-void MainTask::setOtaEnabled(bool enabled) {
-    if (enabled) {
+void MainTask::setOtaEnabled(bool enabled)
+{
+    if (enabled)
+    {
         ArduinoOTA.begin();
-    } else {
+    }
+    else
+    {
         ArduinoOTA.end();
     }
 }
 
-void MainTask::registerEventQueue(QueueHandle_t queue) {
+void MainTask::registerEventQueue(QueueHandle_t queue)
+{
     SemaphoreGuard lock(semaphore_);
     event_queues_.push_back(queue);
 }
 
-void MainTask::publishEvent(Event event) {
+void MainTask::publishEvent(Event event)
+{
     SemaphoreGuard lock(semaphore_);
-    for (QueueHandle_t queue : event_queues_) {
+    for (QueueHandle_t queue : event_queues_)
+    {
         xQueueSend(queue, &event, 0);
     }
 }
 
-void MainTask::handleEvent(AceButton* button, uint8_t event_type, uint8_t button_state) {
+void MainTask::handleEvent(AceButton *button, uint8_t event_type, uint8_t button_state)
+{
     Event event = {
         .type = EventType::BUTTON,
         {
@@ -194,7 +216,6 @@ void MainTask::handleEvent(AceButton* button, uint8_t event_type, uint8_t button
                 .button_id = button->getId(),
                 .event = event_type,
             },
-        }
-    };
+        }};
     publishEvent(event);
 }
