@@ -30,7 +30,7 @@ bool ConfigManager::loadConfig(std::string filename)
 
 esp_err_t ConfigManager::assertJson() const
 {
-    if (json_ == nullptr)
+    if (json_ != nullptr)
     {
         return ESP_OK;
     }
@@ -46,16 +46,19 @@ bool ConfigManager::getShowLog() const
 
 const char *ConfigManager::getSSID() const
 {
+    ESP_ERROR_CHECK(assertJson());
     ESP_LOGD("CONFIG_MANAGER", "SSID: %s", json_["ssid"].string_value().c_str());
     return json_["ssid"].string_value().c_str();
 }
 const char *ConfigManager::getPassword() const
 {
+    ESP_ERROR_CHECK(assertJson());
     ESP_LOGD("CONFIG_MANAGER", "Password: %s", json_["password"].string_value().c_str());
     return json_["password"].string_value().c_str();
 }
 const char *ConfigManager::getTimezone() const
 {
+    ESP_ERROR_CHECK(assertJson());
     ESP_LOGD("CONFIG_MANAGER", "Timezone: %s", json_["timezone"].string_value().c_str());
     return json_["timezone"].string_value().c_str();
 }

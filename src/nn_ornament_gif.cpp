@@ -1,14 +1,14 @@
 #include "nn_ornament_gif.h"
 
-NNOrnamentGIF* NNOrnamentGIF::instance_ = nullptr;
+NNOrnamentGIFWrapper* NNOrnamentGIFWrapper::instance_ = nullptr;
 
-NNOrnamentGIF::NNOrnamentGIF(NNOrnamentSD& sd, NNOrnamentTFT& tft)
+NNOrnamentGIFWrapper::NNOrnamentGIFWrapper(NNOrnamentSDWrapper& sd, NNOrnamentTFTWrapper& tft)
     : sd_(sd), tft_(tft) {
     gif_.begin(LITTLE_ENDIAN_PIXELS);
     instance_ = this;
 }
 
-bool NNOrnamentGIF::openFile(const char* filename) {
+bool NNOrnamentGIFWrapper::openFile(const char* filename) {
     closeFile();
     file_ = sd_.getSD().open(filename, FILE_READ);
     ESP_LOGD("NNOrnamentGIF", "openFile: %s", filename);
@@ -24,14 +24,14 @@ bool NNOrnamentGIF::openFile(const char* filename) {
     return gif_.open(gifData, size, drawCallback);
 }
 
-void NNOrnamentGIF::closeFile() {
+void NNOrnamentGIFWrapper::closeFile() {
     if (file_) {
         file_.close();
     }
     gif_.close();
 }
 
-bool NNOrnamentGIF::playFrame() {
+bool NNOrnamentGIFWrapper::playFrame() {
     ESP_LOGD("NNOrnamentGIF", "isOpen: %d", isOpen());
     if (!isOpen()) {
         return false;
@@ -39,13 +39,13 @@ bool NNOrnamentGIF::playFrame() {
     return gif_.playFrame(true, NULL);
 }
 
-void NNOrnamentGIF::drawCallback(GIFDRAW *pDraw) {
+void NNOrnamentGIFWrapper::drawCallback(GIFDRAW *pDraw) {
     if (instance_) {
         instance_->draw(pDraw);
     }
 }
 
-void NNOrnamentGIF::draw(GIFDRAW *pDraw) {
+void NNOrnamentGIFWrapper::draw(GIFDRAW *pDraw) {
     TFT_eSPI* tft = tft_.getTFT();
     uint8_t *s;
     uint16_t *d, *usPalette, usTemp[320];

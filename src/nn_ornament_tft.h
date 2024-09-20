@@ -85,15 +85,15 @@ struct LcdCommand {
     uint8_t len;
 };
 
-class NNOrnamentTFT {
+class NNOrnamentTFTWrapper {
 public:
-    NNOrnamentTFT();
-    ~NNOrnamentTFT() = default;
+    NNOrnamentTFTWrapper();
+    ~NNOrnamentTFTWrapper() = default;
 
-    NNOrnamentTFT(const NNOrnamentTFT&) = delete;
-    NNOrnamentTFT& operator=(const NNOrnamentTFT&) = delete;
-    NNOrnamentTFT(NNOrnamentTFT&&) = delete;
-    NNOrnamentTFT& operator=(NNOrnamentTFT&&) = delete;
+    NNOrnamentTFTWrapper(const NNOrnamentTFTWrapper&) = delete;
+    NNOrnamentTFTWrapper& operator=(const NNOrnamentTFTWrapper&) = delete;
+    NNOrnamentTFTWrapper(NNOrnamentTFTWrapper&&) = delete;
+    NNOrnamentTFTWrapper& operator=(NNOrnamentTFTWrapper&&) = delete;
 
     void init();
 

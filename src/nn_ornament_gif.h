@@ -6,15 +6,15 @@
 
 #define BUFFER_SIZE 256 // Optimum is >= GIF width or integral division of width
 
-class NNOrnamentGIF {
+class NNOrnamentGIFWrapper {
 public:
-    NNOrnamentGIF(NNOrnamentSD& sd, NNOrnamentTFT& tft);
-    ~NNOrnamentGIF() = default;
+    NNOrnamentGIFWrapper(NNOrnamentSDWrapper& sd, NNOrnamentTFTWrapper& tft);
+    ~NNOrnamentGIFWrapper() = default;
 
-    NNOrnamentGIF(const NNOrnamentGIF&) = delete;
-    NNOrnamentGIF& operator=(const NNOrnamentGIF&) = delete;
-    NNOrnamentGIF(NNOrnamentGIF&&) = delete;
-    NNOrnamentGIF& operator=(NNOrnamentGIF&&) = delete;
+    NNOrnamentGIFWrapper(const NNOrnamentGIFWrapper&) = delete;
+    NNOrnamentGIFWrapper& operator=(const NNOrnamentGIFWrapper&) = delete;
+    NNOrnamentGIFWrapper(NNOrnamentGIFWrapper&&) = delete;
+    NNOrnamentGIFWrapper& operator=(NNOrnamentGIFWrapper&&) = delete;
 
     bool openFile(const char* filename);
     void closeFile();
@@ -25,11 +25,11 @@ private:
     static void drawCallback(GIFDRAW *pDraw);
     void draw(GIFDRAW *pDraw);
 
-    NNOrnamentSD& sd_;
-    NNOrnamentTFT& tft_;
+    NNOrnamentSDWrapper& sd_;
+    NNOrnamentTFTWrapper& tft_;
     AnimatedGIF gif_;
     File file_;
     uint16_t usTemp_[BUFFER_SIZE];
 
-    static NNOrnamentGIF* instance_;
+    static NNOrnamentGIFWrapper* instance_;
 };

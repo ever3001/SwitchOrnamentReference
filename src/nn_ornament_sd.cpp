@@ -7,9 +7,9 @@ namespace {
     constexpr char TAG[] = "SD";
 }
 
-NNOrnamentSD::NNOrnamentSD() : cardType_(CARD_NONE), cardSize_(0), sd_(&SD) {}
+NNOrnamentSDWrapper::NNOrnamentSDWrapper() : cardType_(CARD_NONE), cardSize_(0), sd_(&SD) {}
 
-NNOrnamentSD::InitResult NNOrnamentSD::init() {
+NNOrnamentSDWrapper::InitResult NNOrnamentSDWrapper::init() {
     ESP_LOGI(TAG, "Initializing SD Card");
     SPI.begin(sclk_, miso_, mosi_, cs_);
     
@@ -34,11 +34,11 @@ NNOrnamentSD::InitResult NNOrnamentSD::init() {
     return InitResult::SUCCESS;
 }
 
-uint64_t NNOrnamentSD::getCardSize() const {
+uint64_t NNOrnamentSDWrapper::getCardSize() const {
     return cardSize_;
 }
 
-std::string NNOrnamentSD::getCardTypeString() const {
+std::string NNOrnamentSDWrapper::getCardTypeString() const {
     switch (cardType_) {
         case CARD_MMC: return "MMC";
         case CARD_SD: return "SDSC";
@@ -47,7 +47,7 @@ std::string NNOrnamentSD::getCardTypeString() const {
     }
 }
 
-void NNOrnamentSD::listDir(const char* dirname, uint8_t levels) {
+void NNOrnamentSDWrapper::listDir(const char* dirname, uint8_t levels) {
     ESP_LOGI(TAG, "Listing directory: %s", dirname);
 
     File root = sd_->open(dirname);
@@ -74,7 +74,7 @@ void NNOrnamentSD::listDir(const char* dirname, uint8_t levels) {
     }
 }
 
-bool NNOrnamentSD::createDir(const char* path) {
+bool NNOrnamentSDWrapper::createDir(const char* path) {
     ESP_LOGI(TAG, "Creating Dir: %s", path);
     if (sd_->mkdir(path)) {
         ESP_LOGI(TAG, "Dir created");
@@ -85,7 +85,7 @@ bool NNOrnamentSD::createDir(const char* path) {
     }
 }
 
-bool NNOrnamentSD::removeDir(const char* path) {
+bool NNOrnamentSDWrapper::removeDir(const char* path) {
     ESP_LOGI(TAG, "Removing Dir: %s", path);
     if (sd_->rmdir(path)) {
         ESP_LOGI(TAG, "Dir removed");
@@ -96,7 +96,7 @@ bool NNOrnamentSD::removeDir(const char* path) {
     }
 }
 
-std::string NNOrnamentSD::readFile(const char* path) {
+std::string NNOrnamentSDWrapper::readFile(const char* path) {
     ESP_LOGI(TAG, "Reading file: %s", path);
 
     File file = sd_->open(path);
@@ -113,7 +113,7 @@ std::string NNOrnamentSD::readFile(const char* path) {
     return content;
 }
 
-bool NNOrnamentSD::writeFile(const char* path, const char* message) {
+bool NNOrnamentSDWrapper::writeFile(const char* path, const char* message) {
     ESP_LOGI(TAG, "Writing file: %s", path);
 
     File file = sd_->open(path, FILE_WRITE);
@@ -132,7 +132,7 @@ bool NNOrnamentSD::writeFile(const char* path, const char* message) {
     }
 }
 
-bool NNOrnamentSD::appendFile(const char* path, const char* message) {
+bool NNOrnamentSDWrapper::appendFile(const char* path, const char* message) {
     ESP_LOGI(TAG, "Appending to file: %s", path);
 
     File file = sd_->open(path, FILE_APPEND);
@@ -151,7 +151,7 @@ bool NNOrnamentSD::appendFile(const char* path, const char* message) {
     }
 }
 
-bool NNOrnamentSD::renameFile(const char* path1, const char* path2) {
+bool NNOrnamentSDWrapper::renameFile(const char* path1, const char* path2) {
     ESP_LOGI(TAG, "Renaming file %s to %s", path1, path2);
     if (sd_->rename(path1, path2)) {
         ESP_LOGI(TAG, "File renamed");
@@ -162,7 +162,7 @@ bool NNOrnamentSD::renameFile(const char* path1, const char* path2) {
     }
 }
 
-bool NNOrnamentSD::deleteFile(const char* path) {
+bool NNOrnamentSDWrapper::deleteFile(const char* path) {
     ESP_LOGI(TAG, "Deleting file: %s", path);
     if (sd_->remove(path)) {
         ESP_LOGI(TAG, "File deleted");

@@ -1,0 +1,90 @@
+#include "gif_manager.h"
+#include <Arduino.h>
+
+GifManager::GifManager(TFT_eSPI &tft)
+    : sd_(sd), tft_wrapper_(tft), gif_(sd_, tft_wrapper_), current_file_(-1)
+{
+    sd_.init();
+}
+
+void GifManager::playBootAnimation(std::string path_to_boot_gif)
+{
+    if (gif_.openFile(path_to_boot_gif.c_str()))
+    {
+        tft_.startWrite();
+        while (gif_.isOpen())
+        {
+            if (!gif_.playFrame())
+            {
+                gif_.closeFile();
+            }
+            yield();
+        }
+        tft_.endWrite();
+    }
+    else
+    {
+        ESP_LOGE("GIF_MANAGER", "Failed to open boot GIF file");
+    }
+}
+
+void GifManager::chooseNextGif(bool is_christmas)
+{
+    std::vector<std::string> &gifs = is_christmas ? christmas_gifs_ : main_gifs_;
+
+    if (gifs.empty())
+    {
+        enumerateGifs(is_christmas ? "/gifs/christmas" : "/gifs/main", gifs);
+    }
+
+    if (!gifs.empty())
+    {
+        int next_file = current_file_;
+        while (gifs.size() > 1 && next_file == current_file_)
+        {
+            next_file = random(gifs.size());
+        }
+        current_file_ = next_file;
+        current_file_name_ = (is_christmas ? "/gifs/christmas/" : "/gifs/main/") + gifs[current_file_];
+
+        ESP_LOGD("GIF_MANAGER", "Chose %s gif: %s", is_christmas ? "christmas" : "main", current_file_name_.c_str());
+
+        if (!gif_.openFile(current_file_name_.c_str()))
+        {
+            ESP_LOGE("GIF_MANAGER", "Failed to open GIF file: %s", current_file_name_.c_str());
+        }
+    }
+    else
+    {
+        ESP_LOGE("GIF_MANAGER", "No GIFs available");
+    }
+}
+
+bool GifManager::playFrame()
+{
+    return gif_.playFrame();
+}
+
+void GifManager::enumerateGifs(const char *basePath, std::vector<std::string> &out_files)
+{
+    out_files.clear();
+    File rootFolder = sd_.getSD().open(basePath);
+    if (!rootFolder || !rootFolder.isDirectory())
+    {
+        ESP_LOGE("GIF_MANAGER", "Failed to open directory: %s", basePath);
+        return;
+    }
+
+    File file = rootFolder.openNextFile();
+    while (file)
+    {
+        if (!file.isDirectory())
+        {
+            out_files.push_back(file.name());
+        }
+        file = rootFolder.openNextFile();
+    }
+    rootFolder.close();
+
+    ESP_LOGD("GIF_MANAGER", "Found %d GIF files in %s", out_files.size(), basePath);
+}

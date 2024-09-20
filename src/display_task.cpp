@@ -12,6 +12,9 @@
 #include "nn_ornament_sd.h"
 #include "nn_ornament_tft.h"
 
+#include "config_manager.h"
+#include "update_manager.h"
+
 using namespace json11;
 
 #if defined(LCD_MODULE_CMD_1)
@@ -40,9 +43,9 @@ lcd_cmd_t lcd_st7789v[] = {
 };
 #endif
 
-NNOrnamentSD sdGlobal;
-NNOrnamentTFT tftGlobal;
-NNOrnamentGIF gifGlobal(sdGlobal, tftGlobal);
+NNOrnamentSDWrapper sdGlobal;
+NNOrnamentTFTWrapper tftGlobal;
+NNOrnamentGIFWrapper gifGlobal(sdGlobal, tftGlobal);
 
 DisplayTask::DisplayTask(MainTask &main_task, const uint8_t task_core) : Task{"Display", 8192, 1, task_core}, main_task_(main_task)
 {
@@ -186,7 +189,7 @@ void DisplayTask::run()
     tftGlobal.init();
 
     bool isblinked = false;
-    while (sdGlobal.init() != NNOrnamentSD::InitResult::SUCCESS)
+    while (sdGlobal.init() != NNOrnamentSDWrapper::InitResult::SUCCESS)
     {
         isblinked = !isblinked;
         if (isblinked)
@@ -203,7 +206,9 @@ void DisplayTask::run()
         vTaskDelay(300 / portTICK_PERIOD_MS);
     }
 
-    if (updateFromFS(sdGlobal.getSD()))
+    UpdateManager updateManager = UpdateManager(tftGlobal.getTFT());
+
+    if (updateManager.checkForUpdate())
     {
         ESP.restart();
     }
@@ -212,44 +217,13 @@ void DisplayTask::run()
     // CHANGES ABOVE THIS LINE MAY BREAK FIRMWARE UPDATES!!!
     // #####################################################
 
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+
     // Load config from SD card
-    File configFile = sdGlobal.getSD().open("/config.json");
-    if (configFile)
+    ConfigManager config = ConfigManager();
+    if (config.loadConfig("/config.json"))
     {
-        if (configFile.isDirectory())
-        {
-            ESP_LOGE("DISPLAY_TASK", "config.json is not a file");
-        }
-        else
-        {
-            char data[512];
-            size_t data_len = configFile.readBytes(data, sizeof(data) - 1);
-            data[data_len] = 0;
-
-            std::string err;
-            Json json = Json::parse(data, err);
-            if (err.empty())
-            {
-                show_log_ = json["show_log"].bool_value();
-                const char *ssid = json["ssid"].string_value().c_str();
-                const char *password = json["password"].string_value().c_str();
-                ESP_LOGD("DISPLAY_TASK", "Wifi info: %s %s\n", ssid, password);
-
-                const char *tz = json["timezone"].string_value().c_str();
-                ESP_LOGD("DISPLAY_TASK", "Timezone: %s\n", tz);
-
-                main_task_.setConfig(ssid, password, tz);
-            }
-            else
-            {
-                ESP_LOGE("DISPLAY_TASK", "Error parsing wifi credentials! %s", err.c_str());
-            }
-        }
-        configFile.close();
-    }
-    else
-    {
-        ESP_LOGE("DISPLAY_TASK", "Missing config file config.json");
+        main_task_.setConfig(config.getSSID(), config.getPassword(), config.getTimezone());
     }
 
     // Delay to avoid brownout while wifi is starting
@@ -446,7 +420,6 @@ void DisplayTask::run()
 bool DisplayTask::isChristmas()
 {
     tm local;
-    return true;
     return main_task_.getLocalTime(&local) && local.tm_mon == 11 && local.tm_mday == 25;
 }
 

@@ -23,7 +23,7 @@
     #error "SD_CS is not defined. Please define it before including this file."
 #endif
 
-class NNOrnamentSD {
+class NNOrnamentSDWrapper {
 public:
     enum class InitResult {
         SUCCESS,
@@ -32,13 +32,13 @@ public:
         UNKNOWN_CARD_TYPE
     };
 
-    NNOrnamentSD();
-    ~NNOrnamentSD() = default;
+    NNOrnamentSDWrapper();
+    ~NNOrnamentSDWrapper() = default;
 
-    NNOrnamentSD(const NNOrnamentSD&) = delete;
-    NNOrnamentSD& operator=(const NNOrnamentSD&) = delete;
-    NNOrnamentSD(NNOrnamentSD&&) = delete;
-    NNOrnamentSD& operator=(NNOrnamentSD&&) = delete;
+    NNOrnamentSDWrapper(const NNOrnamentSDWrapper&) = delete;
+    NNOrnamentSDWrapper& operator=(const NNOrnamentSDWrapper&) = delete;
+    NNOrnamentSDWrapper(NNOrnamentSDWrapper&&) = delete;
+    NNOrnamentSDWrapper& operator=(NNOrnamentSDWrapper&&) = delete;
 
     InitResult init();
     uint64_t getCardSize() const;

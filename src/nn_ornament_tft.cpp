@@ -5,7 +5,7 @@ namespace {
     constexpr char TAG[] = "TFT";
 }
 
-const std::array<LcdCommand, 14> NNOrnamentTFT::lcd_st7789v_ = {{
+const std::array<LcdCommand, 14> NNOrnamentTFTWrapper::lcd_st7789v_ = {{
     {0x11, {0}, 0x80},
     {0x3A, {0X05}, 1},
     {0xB2, {0X0B, 0X0B, 0X00, 0X33, 0X33}, 5},
@@ -22,9 +22,9 @@ const std::array<LcdCommand, 14> NNOrnamentTFT::lcd_st7789v_ = {{
     {0xE1, {0XF0, 0X08, 0X0C, 0X0B, 0X09, 0X24, 0X2B, 0X22, 0X43, 0X38, 0X15, 0X16, 0X2F, 0X37}, 14}
 }};
 
-NNOrnamentTFT::NNOrnamentTFT() : tft_() {}
+NNOrnamentTFTWrapper::NNOrnamentTFTWrapper() : tft_() {}
 
-void NNOrnamentTFT::init() {
+void NNOrnamentTFTWrapper::init() {
     ESP_LOGI(TAG, "Initializing TFT");
     
     pinMode(pinPowerOn_, OUTPUT);
