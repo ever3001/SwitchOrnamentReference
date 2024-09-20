@@ -11,8 +11,9 @@ bool ConfigManager::loadConfig(std::string filename)
     }
 
     size_t size = configFile.size();
-    std::unique_ptr<char[]> buf(new char[size]);
+    std::unique_ptr<char[]> buf(new char[size + 1]);
     configFile.readBytes(buf.get(), size);
+    buf[size] = '\0';
     configFile.close();
 
     std::string err;
@@ -29,7 +30,8 @@ bool ConfigManager::loadConfig(std::string filename)
 
 esp_err_t ConfigManager::assertJson() const
 {
-    if (json_ == nullptr){
+    if (json_ == nullptr)
+    {
         return ESP_OK;
     }
     return ESP_FAIL;
